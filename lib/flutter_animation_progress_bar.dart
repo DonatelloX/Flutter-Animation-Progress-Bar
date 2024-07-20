@@ -15,7 +15,7 @@ class FAProgressBar extends StatefulWidget {
     this.currentValue = 0,
     this.maxValue = 100,
     this.size = 30,
-    this.animatedDuration = const Duration(milliseconds: 300),
+    this.animatedDuration = const Duration(milliseconds: 200),
     this.direction = Axis.horizontal,
     this.verticalDirection = VerticalDirection.down,
     BorderRadiusGeometry? borderRadius,
@@ -28,8 +28,9 @@ class FAProgressBar extends StatefulWidget {
     this.formatValueFixed,
     this.displayText,
     this.displayTextStyle =
-        const TextStyle(color: const Color(0xFFFFFFFF), fontSize: 12),
-    this.progressGradient
+    const TextStyle(color: const Color(0xFFFFFFFF), fontSize: 12),
+    this.progressGradient,
+    this.onTap,
   })  : _borderRadius = borderRadius ?? BorderRadius.circular(8),
         super(key: key);
   final double currentValue;
@@ -49,6 +50,7 @@ class FAProgressBar extends StatefulWidget {
   final String? displayText;
   final TextStyle displayTextStyle;
   final Gradient? progressGradient;
+  final Function(double)? onTap;
 
   @override
   _FAProgressBarState createState() => _FAProgressBarState();
@@ -97,9 +99,9 @@ class _FAProgressBarState extends State<FAProgressBar>
 
   @override
   Widget build(BuildContext context) => AnimatedProgressBar(
-        animation: _animation,
-        widget: widget,
-      );
+    animation: _animation,
+    widget: widget,
+  );
 
   @override
   void dispose() {
@@ -156,11 +158,11 @@ class AnimatedProgressBar extends AnimatedWidget {
         alignment: widget.direction == Axis.horizontal
             ? FractionalOffset(0.95, 0.5)
             : (widget.verticalDirection == VerticalDirection.up
-                ? FractionalOffset(0.5, 0.05)
-                : FractionalOffset(0.5, 0.95)),
+            ? FractionalOffset(0.5, 0.05)
+            : FractionalOffset(0.5, 0.95)),
         child: Text(
           widget.formatValue.call(
-                  animation.value * widget.maxValue, widget.formatValueFixed) +
+              animation.value * widget.maxValue, widget.formatValueFixed) +
               widget.displayText!,
           softWrap: false,
           style: widget.displayTextStyle,
@@ -169,7 +171,19 @@ class AnimatedProgressBar extends AnimatedWidget {
       progressWidgets.add(textProgress);
     }
 
-    return Directionality(
+    return GestureDetector(
+        onTapDown: (TapDownDetails details) {
+      if (widget.onTap != null) {
+        final RenderBox box = context.findRenderObject() as RenderBox;
+        final Offset localPosition = box.globalToLocal(details.globalPosition);
+        double newValue = widget.direction == Axis.horizontal
+            ? localPosition.dx / box.size.width
+            : 1 - (localPosition.dy / box.size.height);
+        newValue = newValue.clamp(0.0, 1.0);
+        widget.onTap!(newValue * widget.maxValue);
+      }
+    },
+    child: Directionality(
       textDirection: TextDirection.ltr,
       child: Container(
         width: widget.direction == Axis.vertical ? widget.size : null,
@@ -196,6 +210,7 @@ class AnimatedProgressBar extends AnimatedWidget {
           ],
         ),
       ),
+    ),
     );
   }
 }
